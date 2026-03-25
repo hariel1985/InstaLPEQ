@@ -5,7 +5,7 @@
 class FIREngine : private juce::Thread
 {
 public:
-    static constexpr int defaultFFTOrder = 13;  // 8192 taps
+    static constexpr int defaultFFTOrder = 11;  // 2048 taps
     static constexpr int maxBands = 8;
 
     FIREngine();

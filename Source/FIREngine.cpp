@@ -33,7 +33,7 @@ void FIREngine::setBands (const std::vector<EQBand>& newBands)
 
 void FIREngine::setFFTOrder (int order)
 {
-    fftOrder.store (juce::jlimit (12, 14, order));
+    fftOrder.store (juce::jlimit (9, 14, order));
     needsUpdate.store (true);
     notify();
 }

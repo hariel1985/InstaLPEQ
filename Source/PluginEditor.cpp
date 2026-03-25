@@ -36,14 +36,17 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
     addAndMakeVisible (newBandButton);
 
     // Quality selector (FIR latency)
-    qualitySelector.addItem ("4096 (~46ms)", 1);
-    qualitySelector.addItem ("8192 (~93ms)", 2);
-    qualitySelector.addItem ("16384 (~186ms)", 3);
-    qualitySelector.setSelectedId (2, juce::dontSendNotification);  // default 8192
+    qualitySelector.addItem ("512 (~6ms)", 1);
+    qualitySelector.addItem ("1024 (~12ms)", 2);
+    qualitySelector.addItem ("2048 (~23ms)", 3);
+    qualitySelector.addItem ("4096 (~46ms)", 4);
+    qualitySelector.addItem ("8192 (~93ms)", 5);
+    qualitySelector.addItem ("16384 (~186ms)", 6);
+    qualitySelector.setSelectedId (3, juce::dontSendNotification);  // default 2048
     qualitySelector.onChange = [this]
     {
         int sel = qualitySelector.getSelectedId();
-        int order = (sel == 1) ? 12 : (sel == 2) ? 13 : 14;
+        int order = sel + 8;  // 1->9, 2->10, 3->11, 4->12, 5->13, 6->14
         processor.setQuality (order);
     };
     addAndMakeVisible (qualitySelector);
