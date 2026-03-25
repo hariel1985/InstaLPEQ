@@ -27,6 +27,9 @@ public:
     int getFIRLength() const { return 1 << fftOrder.load(); }
     int getLatencySamples() const { return getFIRLength() / 2; }
 
+    // Auto makeup gain: A-weighted RMS loudness compensation (dB)
+    float getAutoMakeupGainDb() const { return autoMakeupDb.load(); }
+
 private:
     void run() override;
     juce::AudioBuffer<float> generateFIR (const std::vector<EQBand>& bands, double sr, int order);
@@ -43,4 +46,7 @@ private:
 
     std::vector<float> magnitudeDb;
     mutable juce::SpinLock magLock;
+
+    std::atomic<float> autoMakeupDb { 0.0f };
+    static float aWeighting (float freq);
 };

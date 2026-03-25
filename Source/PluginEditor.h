@@ -44,7 +44,7 @@ private:
     NodeParameterPanel nodePanel;
 
     juce::Label titleLabel { {}, "INSTALPEQ" };
-    juce::Label versionLabel { {}, "v1.2.2" };
+    juce::Label versionLabel { {}, "v1.3.0" };
     juce::ToggleButton bypassToggle;
     juce::Label bypassLabel { {}, "BYPASS" };
 
@@ -57,8 +57,9 @@ private:
     juce::Label masterGainLabel { {}, "MASTER" };
     juce::ToggleButton limiterToggle;
     juce::Label limiterLabel { {}, "LIMITER" };
-    juce::Slider makeupGainSlider;
-    juce::Label makeupGainLabel { {}, "MAKEUP" };
+    juce::ToggleButton autoMakeupToggle;
+    juce::Label autoMakeupLabel { {}, "AUTO GAIN" };
+    juce::Label autoMakeupValue { {}, "0.0 dB" };
 
     SignalChainPanel chainPanel;
 

@@ -92,17 +92,17 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
     limiterLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (limiterLabel);
 
-    // Makeup gain
-    makeupGainSlider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    makeupGainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 16);
-    makeupGainSlider.setRange (-24.0, 24.0, 0.1);
-    makeupGainSlider.setValue (0.0);
-    makeupGainSlider.setTextValueSuffix (" dB");
-    makeupGainSlider.setDoubleClickReturnValue (true, 0.0);
-    addAndMakeVisible (makeupGainSlider);
-    makeupGainLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
-    makeupGainLabel.setJustificationType (juce::Justification::centred);
-    addAndMakeVisible (makeupGainLabel);
+    // Auto makeup gain
+    autoMakeupToggle.setToggleState (processor.autoMakeupEnabled.load(), juce::dontSendNotification);
+    addAndMakeVisible (autoMakeupToggle);
+    autoMakeupLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
+    autoMakeupLabel.setColour (juce::Label::textColourId, InstaLPEQLookAndFeel::textSecondary);
+    autoMakeupLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (autoMakeupLabel);
+    autoMakeupValue.setFont (customLookAndFeel.getRegularFont (12.0f));
+    autoMakeupValue.setColour (juce::Label::textColourId, InstaLPEQLookAndFeel::accent);
+    autoMakeupValue.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (autoMakeupValue);
 
     // Signal chain panel
     chainPanel.setListener (this);
@@ -189,10 +189,12 @@ void InstaLPEQEditor::resized()
     limiterLabel.setBounds (masterArea.removeFromLeft (55));
     limiterToggle.setBounds (masterArea.removeFromLeft (40));
 
-    // Makeup gain knob
-    makeupGainLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
-    makeupGainLabel.setBounds (masterArea.removeFromLeft (55));
-    makeupGainSlider.setBounds (masterArea.removeFromLeft (masterH));
+    // Auto makeup gain toggle + value display
+    autoMakeupLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
+    autoMakeupLabel.setBounds (masterArea.removeFromLeft (70));
+    autoMakeupToggle.setBounds (masterArea.removeFromLeft (40));
+    autoMakeupValue.setFont (customLookAndFeel.getRegularFont (std::max (10.0f, 12.0f * scale)));
+    autoMakeupValue.setBounds (masterArea.removeFromLeft (60));
 
     // Quality selector on the right side of master row
     qualityLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
@@ -218,7 +220,12 @@ void InstaLPEQEditor::timerCallback()
     processor.bypassed.store (bypassToggle.getToggleState());
     processor.masterGainDb.store ((float) masterGainSlider.getValue());
     processor.limiterEnabled.store (limiterToggle.getToggleState());
-    processor.makeupGainDb.store ((float) makeupGainSlider.getValue());
+    processor.autoMakeupEnabled.store (autoMakeupToggle.getToggleState());
+
+    // Update auto makeup display
+    float mkDb = processor.getActiveAutoMakeupDb();
+    juce::String mkStr = (mkDb >= 0 ? "+" : "") + juce::String (mkDb, 1) + " dB";
+    autoMakeupValue.setText (mkStr, juce::dontSendNotification);
 
     // Update spectrum analyzer
     {

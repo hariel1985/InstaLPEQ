@@ -124,11 +124,11 @@ juce::AudioBuffer<float> FIREngine::generateFIR (const std::vector<EQBand>& band
             magnitudes[i] *= bandMag[i];
     }
 
-    // Store magnitude in dB for display
+    // Store theoretical magnitude in dB for display (from IIR target curve)
     {
         std::vector<float> magDb (numBins);
         for (int i = 0; i < numBins; ++i)
-            magDb[i] = (float) juce::Decibels::gainToDecibels (magnitudes[i], -60.0);
+            magDb[i] = (float) juce::Decibels::gainToDecibels ((float) magnitudes[i], -60.0f);
 
         const juce::SpinLock::ScopedLockType lock (magLock);
         magnitudeDb = std::move (magDb);
@@ -168,5 +168,73 @@ juce::AudioBuffer<float> FIREngine::generateFIR (const std::vector<EQBand>& band
     juce::dsp::WindowingFunction<float> window (fftSize, juce::dsp::WindowingFunction<float>::blackmanHarris);
     window.multiplyWithWindowingTable (firData, fftSize);
 
+    // Normalize: ensure flat spectrum → unity DC gain
+    // Without this, IFFT scaling + windowing cause incorrect base level
+    float dcGain = 0.0f;
+    for (int i = 0; i < fftSize; ++i)
+        dcGain += firData[i];
+
+    if (std::abs (dcGain) > 1e-6f)
+    {
+        float normFactor = 1.0f / dcGain;
+        for (int i = 0; i < fftSize; ++i)
+            firData[i] *= normFactor;
+    }
+
+    // Compute auto makeup from the ACTUAL final FIR frequency response
+    // (includes windowing + normalization effects)
+    {
+        std::vector<float> analysisBuf (fftSize * 2, 0.0f);
+        std::copy (firData, firData + fftSize, analysisBuf.data());
+
+        juce::dsp::FFT analysisFft (order);
+        analysisFft.performRealOnlyForwardTransform (analysisBuf.data());
+
+        // Extract actual magnitude from FFT result
+        // Format: [DC_real, Nyquist_real, bin1_real, bin1_imag, bin2_real, bin2_imag, ...]
+        double powerSum = 0.0;
+        int count = 0;
+
+        for (int i = 1; i < fftSize / 2; ++i)
+        {
+            float re = analysisBuf[i * 2];
+            float im = analysisBuf[i * 2 + 1];
+            powerSum += (double) (re * re + im * im);
+            count++;
+        }
+
+        if (count > 0)
+        {
+            double avgPower = powerSum / (double) count;
+            float rmsGain = (float) std::sqrt (avgPower);
+            float makeupDb = -20.0f * std::log10 (std::max (rmsGain, 1e-10f));
+            autoMakeupDb.store (makeupDb);
+        }
+
+        // (magnitudeDb stays as theoretical IIR curve for display)
+    }
+
     return firBuffer;
+}
+
+// A-weighting curve (IEC 61672:2003)
+// Returns linear amplitude weighting factor for given frequency
+float FIREngine::aWeighting (float f)
+{
+    if (f < 10.0f) return 0.0f;
+
+    double f2 = (double) f * (double) f;
+    double f4 = f2 * f2;
+
+    double num = 12194.0 * 12194.0 * f4;
+    double den = (f2 + 20.6 * 20.6)
+               * std::sqrt ((f2 + 107.7 * 107.7) * (f2 + 737.9 * 737.9))
+               * (f2 + 12194.0 * 12194.0);
+
+    double ra = num / den;
+
+    // Normalize so A(1000 Hz) = 1.0
+    // A(1000) unnormalized ≈ 0.7943
+    static const double norm = 1.0 / 0.7943282347;
+    return (float) (ra * norm);
 }

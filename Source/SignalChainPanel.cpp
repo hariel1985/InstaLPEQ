@@ -21,7 +21,7 @@ juce::String SignalChainPanel::getStageName (InstaLPEQProcessor::ChainStage stag
     {
         case InstaLPEQProcessor::MasterGain: return "MASTER GAIN";
         case InstaLPEQProcessor::Limiter:    return "LIMITER";
-        case InstaLPEQProcessor::MakeupGain: return "MAKEUP GAIN";
+        case InstaLPEQProcessor::MakeupGain: return "AUTO GAIN";
         default: return "?";
     }
 }

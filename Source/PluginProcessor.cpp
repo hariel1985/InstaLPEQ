@@ -61,7 +61,7 @@ void InstaLPEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (bypassed.load() || ! firLoaded)
         return;
 
-    // Process through convolution
+    // Process through convolution (EQ)
     juce::dsp::AudioBlock<float> block (buffer);
     juce::dsp::ProcessContextReplacing<float> context (block);
     convolution.process (context);
@@ -99,9 +99,12 @@ void InstaLPEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             }
             case MakeupGain:
             {
-                float mkGain = juce::Decibels::decibelsToGain (makeupGainDb.load());
-                if (std::abs (mkGain - 1.0f) > 0.001f)
-                    buffer.applyGain (mkGain);
+                if (autoMakeupEnabled.load())
+                {
+                    float mkGain = juce::Decibels::decibelsToGain (firEngine.getAutoMakeupGainDb());
+                    if (std::abs (mkGain - 1.0f) > 0.001f)
+                        buffer.applyGain (mkGain);
+                }
                 break;
             }
             default: break;
@@ -207,6 +210,11 @@ bool InstaLPEQProcessor::getSpectrum (float* dest, int maxBins) const
     return true;
 }
 
+float InstaLPEQProcessor::getActiveAutoMakeupDb() const
+{
+    return autoMakeupEnabled.load() ? firEngine.getAutoMakeupGainDb() : 0.0f;
+}
+
 std::array<InstaLPEQProcessor::ChainStage, InstaLPEQProcessor::numChainStages> InstaLPEQProcessor::getChainOrder() const
 {
     const juce::SpinLock::ScopedLockType lock (chainLock);
@@ -242,7 +250,7 @@ void InstaLPEQProcessor::getStateInformation (juce::MemoryBlock& destData)
     xml.setAttribute ("bypass", bypassed.load());
     xml.setAttribute ("masterGain", (double) masterGainDb.load());
     xml.setAttribute ("limiter", limiterEnabled.load());
-    xml.setAttribute ("makeupGain", (double) makeupGainDb.load());
+    xml.setAttribute ("autoMakeup", autoMakeupEnabled.load());
 
     auto order = getChainOrder();
     juce::String chainStr;
@@ -276,7 +284,7 @@ void InstaLPEQProcessor::setStateInformation (const void* data, int sizeInBytes)
     bypassed.store (xml->getBoolAttribute ("bypass", false));
     masterGainDb.store ((float) xml->getDoubleAttribute ("masterGain", 0.0));
     limiterEnabled.store (xml->getBoolAttribute ("limiter", true));
-    makeupGainDb.store ((float) xml->getDoubleAttribute ("makeupGain", 0.0));
+    autoMakeupEnabled.store (xml->getBoolAttribute ("autoMakeup", true));
 
     auto chainStr = xml->getStringAttribute ("chainOrder", "0,1,2");
     auto tokens = juce::StringArray::fromTokens (chainStr, ",", "");

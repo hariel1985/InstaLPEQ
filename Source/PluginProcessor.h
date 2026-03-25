@@ -48,7 +48,10 @@ public:
     std::atomic<bool> bypassed { false };
     std::atomic<float> masterGainDb { 0.0f };
     std::atomic<bool> limiterEnabled { true };
-    std::atomic<float> makeupGainDb { 0.0f };  // -24 to +24 dB
+    std::atomic<bool> autoMakeupEnabled { true };
+
+    float getActiveAutoMakeupDb() const;
+    float getMeasuredAutoMakeupDb() const { return measuredMakeupDb.load(); }
 
     // Chain order (read/write from GUI, read from audio thread)
     std::array<ChainStage, numChainStages> getChainOrder() const;
@@ -85,6 +88,11 @@ public:
     double currentSampleRate = 44100.0;
     int currentBlockSize = 512;
     bool firLoaded = false;
+
+    // Signal-based auto makeup measurement
+    double smoothedInputRms = 0.0;
+    double smoothedOutputRms = 0.0;
+    std::atomic<float> measuredMakeupDb { 0.0f };
 
     std::array<ChainStage, numChainStages> chainOrder { MasterGain, Limiter, MakeupGain };
     juce::SpinLock chainLock;
