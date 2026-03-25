@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(InstaLPEQ VERSION 1.1.3)
+project(InstaLPEQ VERSION 1.2.2)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +35,7 @@ target_sources(InstaLPEQ
         Source/EQCurveDisplay.cpp
         Source/FIREngine.cpp
         Source/NodeParameterPanel.cpp
+        Source/SignalChainPanel.cpp
 )
 
 target_compile_definitions(InstaLPEQ

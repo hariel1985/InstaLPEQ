@@ -66,17 +66,80 @@ void InstaLPEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     juce::dsp::ProcessContextReplacing<float> context (block);
     convolution.process (context);
 
-    // Apply master gain
-    float gain = juce::Decibels::decibelsToGain (masterGainDb.load());
-    if (std::abs (gain - 1.0f) > 0.001f)
-        buffer.applyGain (gain);
-
-    // Brickwall limiter (0 dB ceiling)
-    if (limiterEnabled.load())
+    // Apply chain in configured order
+    std::array<ChainStage, numChainStages> order;
     {
-        juce::dsp::AudioBlock<float> limBlock (buffer);
-        juce::dsp::ProcessContextReplacing<float> limContext (limBlock);
-        limiter.process (limContext);
+        const juce::SpinLock::ScopedTryLockType lock (chainLock);
+        if (lock.isLocked())
+            order = chainOrder;
+        else
+            order = { MasterGain, Limiter, MakeupGain };
+    }
+
+    for (auto stage : order)
+    {
+        switch (stage)
+        {
+            case MasterGain:
+            {
+                float gain = juce::Decibels::decibelsToGain (masterGainDb.load());
+                if (std::abs (gain - 1.0f) > 0.001f)
+                    buffer.applyGain (gain);
+                break;
+            }
+            case Limiter:
+            {
+                if (limiterEnabled.load())
+                {
+                    juce::dsp::AudioBlock<float> limBlock (buffer);
+                    juce::dsp::ProcessContextReplacing<float> limContext (limBlock);
+                    limiter.process (limContext);
+                }
+                break;
+            }
+            case MakeupGain:
+            {
+                float mkGain = juce::Decibels::decibelsToGain (makeupGainDb.load());
+                if (std::abs (mkGain - 1.0f) > 0.001f)
+                    buffer.applyGain (mkGain);
+                break;
+            }
+            default: break;
+        }
+    }
+
+    // Feed spectrum analyzer (mono mix of output)
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float sample = 0.0f;
+        for (int ch = 0; ch < numChannels; ++ch)
+            sample += buffer.getSample (ch, i);
+        sample /= (float) numChannels;
+
+        fifoBuffer[fifoIndex++] = sample;
+
+        if (fifoIndex >= spectrumFFTSize)
+        {
+            fifoIndex = 0;
+            std::copy (fifoBuffer.begin(), fifoBuffer.end(), fftData.begin());
+            std::fill (fftData.begin() + spectrumFFTSize, fftData.end(), 0.0f);
+            spectrumWindow.multiplyWithWindowingTable (fftData.data(), spectrumFFTSize);
+            spectrumFFT.performFrequencyOnlyForwardTransform (fftData.data());
+
+            {
+                const juce::SpinLock::ScopedLockType lock (spectrumLock);
+                for (int b = 0; b < spectrumFFTSize / 2; ++b)
+                {
+                    float mag = fftData[b] / (float) spectrumFFTSize;
+                    float dbVal = juce::Decibels::gainToDecibels (mag, -100.0f);
+                    // Smooth: 70% old + 30% new
+                    spectrumMagnitude[b] = spectrumMagnitude[b] * 0.7f + dbVal * 0.3f;
+                }
+            }
+            spectrumReady.store (true);
+        }
     }
 }
 
@@ -130,6 +193,32 @@ int InstaLPEQProcessor::getNumBands() const
     return (int) bands.size();
 }
 
+bool InstaLPEQProcessor::getSpectrum (float* dest, int maxBins) const
+{
+    if (! spectrumReady.load())
+        return false;
+
+    const juce::SpinLock::ScopedTryLockType lock (spectrumLock);
+    if (! lock.isLocked())
+        return false;
+
+    int bins = std::min (maxBins, spectrumFFTSize / 2);
+    std::copy (spectrumMagnitude.begin(), spectrumMagnitude.begin() + bins, dest);
+    return true;
+}
+
+std::array<InstaLPEQProcessor::ChainStage, InstaLPEQProcessor::numChainStages> InstaLPEQProcessor::getChainOrder() const
+{
+    const juce::SpinLock::ScopedLockType lock (chainLock);
+    return chainOrder;
+}
+
+void InstaLPEQProcessor::setChainOrder (const std::array<ChainStage, numChainStages>& order)
+{
+    const juce::SpinLock::ScopedLockType lock (chainLock);
+    chainOrder = order;
+}
+
 void InstaLPEQProcessor::updateFIR()
 {
     auto currentBands = getBands();
@@ -153,6 +242,16 @@ void InstaLPEQProcessor::getStateInformation (juce::MemoryBlock& destData)
     xml.setAttribute ("bypass", bypassed.load());
     xml.setAttribute ("masterGain", (double) masterGainDb.load());
     xml.setAttribute ("limiter", limiterEnabled.load());
+    xml.setAttribute ("makeupGain", (double) makeupGainDb.load());
+
+    auto order = getChainOrder();
+    juce::String chainStr;
+    for (int i = 0; i < numChainStages; ++i)
+    {
+        if (i > 0) chainStr += ",";
+        chainStr += juce::String ((int) order[i]);
+    }
+    xml.setAttribute ("chainOrder", chainStr);
 
     auto currentBands = getBands();
     for (int i = 0; i < (int) currentBands.size(); ++i)
@@ -177,6 +276,17 @@ void InstaLPEQProcessor::setStateInformation (const void* data, int sizeInBytes)
     bypassed.store (xml->getBoolAttribute ("bypass", false));
     masterGainDb.store ((float) xml->getDoubleAttribute ("masterGain", 0.0));
     limiterEnabled.store (xml->getBoolAttribute ("limiter", true));
+    makeupGainDb.store ((float) xml->getDoubleAttribute ("makeupGain", 0.0));
+
+    auto chainStr = xml->getStringAttribute ("chainOrder", "0,1,2");
+    auto tokens = juce::StringArray::fromTokens (chainStr, ",", "");
+    if (tokens.size() == numChainStages)
+    {
+        std::array<ChainStage, numChainStages> order;
+        for (int i = 0; i < numChainStages; ++i)
+            order[i] = static_cast<ChainStage> (tokens[i].getIntValue());
+        setChainOrder (order);
+    }
 
     std::vector<EQBand> loadedBands;
     for (auto* bandXml : xml->getChildIterator())

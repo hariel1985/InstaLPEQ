@@ -17,6 +17,13 @@ void EQCurveDisplay::setMagnitudeResponse (const std::vector<float>& magnitudesD
     repaint();
 }
 
+void EQCurveDisplay::setSpectrum (const float* data, int numBins, double sampleRate, int fftSize)
+{
+    spectrumDb.assign (data, data + numBins);
+    spectrumSampleRate = sampleRate;
+    spectrumFftSize = fftSize;
+}
+
 void EQCurveDisplay::setSelectedBand (int index)
 {
     if (selectedBand != index)
@@ -93,6 +100,7 @@ void EQCurveDisplay::paint (juce::Graphics& g)
     g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
 
     drawGrid (g);
+    drawSpectrum (g);
     drawPerBandCurves (g);
     drawResponseCurve (g);
     drawNodes (g);
@@ -138,6 +146,55 @@ void EQCurveDisplay::drawGrid (juce::Graphics& g)
                          juce::Justification::centredRight, false);
         }
     }
+}
+
+void EQCurveDisplay::drawSpectrum (juce::Graphics& g)
+{
+    if (spectrumDb.empty())
+        return;
+
+    auto area = getPlotArea();
+    int numBins = (int) spectrumDb.size();
+
+    juce::Path specPath;
+    specPath.startNewSubPath (area.getX(), area.getBottom());
+    bool hasPoints = false;
+
+    for (float px = area.getX(); px <= area.getRight(); px += 1.5f)
+    {
+        float freq = xToFreq (px);
+        if (freq < 1.0f || freq > spectrumSampleRate * 0.5)
+            continue;
+
+        float binFloat = freq * (float) spectrumFftSize / (float) spectrumSampleRate;
+        int bin = (int) binFloat;
+        float frac = binFloat - (float) bin;
+
+        if (bin < 0 || bin >= numBins - 1)
+            continue;
+
+        float dbVal = spectrumDb[bin] * (1.0f - frac) + spectrumDb[bin + 1] * frac;
+        // Map dB range: -100 dB = bottom, 0 dB = top area
+        // Shift up so typical audio is visible
+        float mapped = juce::jmap (dbVal, -80.0f, 0.0f, minDb, maxDb);
+        mapped = juce::jlimit (minDb - 6.0f, maxDb, mapped);
+        float yPos = dbToY (mapped);
+
+        specPath.lineTo (px, yPos);
+        hasPoints = true;
+    }
+
+    if (! hasPoints)
+        return;
+
+    specPath.lineTo (area.getRight(), area.getBottom());
+    specPath.closeSubPath();
+
+    // Fill with subtle gradient
+    juce::ColourGradient specGrad (juce::Colour (0xff4488ff).withAlpha (0.12f), 0, area.getY(),
+                                    juce::Colour (0xff4488ff).withAlpha (0.03f), 0, area.getBottom(), false);
+    g.setGradientFill (specGrad);
+    g.fillPath (specPath);
 }
 
 void EQCurveDisplay::drawResponseCurve (juce::Graphics& g)

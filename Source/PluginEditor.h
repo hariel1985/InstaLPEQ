@@ -4,11 +4,13 @@
 #include "LookAndFeel.h"
 #include "EQCurveDisplay.h"
 #include "NodeParameterPanel.h"
+#include "SignalChainPanel.h"
 
 class InstaLPEQEditor : public juce::AudioProcessorEditor,
                          private juce::Timer,
                          private EQCurveDisplay::Listener,
-                         private NodeParameterPanel::Listener
+                         private NodeParameterPanel::Listener,
+                         private SignalChainPanel::Listener
 {
 public:
     explicit InstaLPEQEditor (InstaLPEQProcessor& p);
@@ -30,6 +32,9 @@ private:
     void nodeParameterChanged (int bandIndex, const EQBand& band) override;
     void nodeDeleteRequested (int bandIndex) override;
 
+    // SignalChainPanel::Listener
+    void chainOrderChanged (const std::array<InstaLPEQProcessor::ChainStage, InstaLPEQProcessor::numChainStages>& order) override;
+
     void syncDisplayFromProcessor();
 
     InstaLPEQProcessor& processor;
@@ -39,7 +44,7 @@ private:
     NodeParameterPanel nodePanel;
 
     juce::Label titleLabel { {}, "INSTALPEQ" };
-    juce::Label versionLabel { {}, "v1.1.3" };
+    juce::Label versionLabel { {}, "v1.2.2" };
     juce::ToggleButton bypassToggle;
     juce::Label bypassLabel { {}, "BYPASS" };
 
@@ -52,6 +57,10 @@ private:
     juce::Label masterGainLabel { {}, "MASTER" };
     juce::ToggleButton limiterToggle;
     juce::Label limiterLabel { {}, "LIMITER" };
+    juce::Slider makeupGainSlider;
+    juce::Label makeupGainLabel { {}, "MAKEUP" };
+
+    SignalChainPanel chainPanel;
 
     juce::ComponentBoundsConstrainer constrainer;
 

@@ -19,6 +19,7 @@ public:
     void setListener (Listener* l) { listener = l; }
     void setBands (const std::vector<EQBand>& bands);
     void setMagnitudeResponse (const std::vector<float>& magnitudesDb, double sampleRate, int fftSize);
+    void setSpectrum (const float* data, int numBins, double sampleRate, int fftSize);
     int getSelectedBandIndex() const { return selectedBand; }
     void setSelectedBand (int index);
 
@@ -32,6 +33,9 @@ public:
 private:
     std::vector<EQBand> bands;
     std::vector<float> magnitudeResponseDb;
+    std::vector<float> spectrumDb;
+    double spectrumSampleRate = 44100.0;
+    int spectrumFftSize = 2048;
     double responseSampleRate = 44100.0;
     int responseFftSize = 8192;
     int selectedBand = -1;
@@ -62,6 +66,7 @@ private:
     float yToDb (float y) const;
 
     void drawGrid (juce::Graphics& g);
+    void drawSpectrum (juce::Graphics& g);
     void drawResponseCurve (juce::Graphics& g);
     void drawPerBandCurves (juce::Graphics& g);
     void drawNodes (juce::Graphics& g);

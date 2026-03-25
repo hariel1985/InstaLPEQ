@@ -92,6 +92,23 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
     limiterLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (limiterLabel);
 
+    // Makeup gain
+    makeupGainSlider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    makeupGainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 16);
+    makeupGainSlider.setRange (-24.0, 24.0, 0.1);
+    makeupGainSlider.setValue (0.0);
+    makeupGainSlider.setTextValueSuffix (" dB");
+    makeupGainSlider.setDoubleClickReturnValue (true, 0.0);
+    addAndMakeVisible (makeupGainSlider);
+    makeupGainLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
+    makeupGainLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (makeupGainLabel);
+
+    // Signal chain panel
+    chainPanel.setListener (this);
+    chainPanel.setOrder (processor.getChainOrder());
+    addAndMakeVisible (chainPanel);
+
     // Sizing
     constrainer.setMinimumSize (700, 450);
     constrainer.setMaximumSize (1920, 1080);
@@ -154,7 +171,11 @@ void InstaLPEQEditor::resized()
 
     newBandButton.setBounds (header.removeFromRight ((int) (90 * scale)).reduced (2));
 
-    // Bottom master row
+    // Signal chain panel (bottom-most)
+    int chainH = (int) std::max (28.0f, 36.0f * scale);
+    chainPanel.setBounds (bounds.removeFromBottom (chainH).reduced (pad, 2));
+
+    // Master controls row (above chain)
     int masterH = (int) std::max (50.0f, 65.0f * scale);
     auto masterArea = bounds.removeFromBottom (masterH).reduced (pad, 2);
 
@@ -167,6 +188,11 @@ void InstaLPEQEditor::resized()
     limiterLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
     limiterLabel.setBounds (masterArea.removeFromLeft (55));
     limiterToggle.setBounds (masterArea.removeFromLeft (40));
+
+    // Makeup gain knob
+    makeupGainLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
+    makeupGainLabel.setBounds (masterArea.removeFromLeft (55));
+    makeupGainSlider.setBounds (masterArea.removeFromLeft (masterH));
 
     // Quality selector on the right side of master row
     qualityLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
@@ -192,6 +218,15 @@ void InstaLPEQEditor::timerCallback()
     processor.bypassed.store (bypassToggle.getToggleState());
     processor.masterGainDb.store ((float) masterGainSlider.getValue());
     processor.limiterEnabled.store (limiterToggle.getToggleState());
+    processor.makeupGainDb.store ((float) makeupGainSlider.getValue());
+
+    // Update spectrum analyzer
+    {
+        std::array<float, 1024> specData {};
+        if (processor.getSpectrum (specData.data(), (int) specData.size()))
+            curveDisplay.setSpectrum (specData.data(), (int) specData.size(),
+                                      processor.getCurrentSampleRate(), 2048);
+    }
 
     // Update display with latest magnitude response
     auto magDb = processor.getFIREngine().getMagnitudeResponseDb();
@@ -265,6 +300,11 @@ void InstaLPEQEditor::nodeDeleteRequested (int bandIndex)
     curveDisplay.setSelectedBand (-1);
     nodePanel.setSelectedBand (-1, nullptr);
     syncDisplayFromProcessor();
+}
+
+void InstaLPEQEditor::chainOrderChanged (const std::array<InstaLPEQProcessor::ChainStage, InstaLPEQProcessor::numChainStages>& order)
+{
+    processor.setChainOrder (order);
 }
 
 void InstaLPEQEditor::syncDisplayFromProcessor()
