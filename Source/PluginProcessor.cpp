@@ -28,6 +28,9 @@ void InstaLPEQProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32) samplesPerBlock, 2 };
     convolution.prepare (spec);
+    limiter.prepare (spec);
+    limiter.setThreshold (0.0f);
+    limiter.setRelease (50.0f);
 
     firEngine.start (sampleRate);
     updateFIR();
@@ -67,6 +70,14 @@ void InstaLPEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     float gain = juce::Decibels::decibelsToGain (masterGainDb.load());
     if (std::abs (gain - 1.0f) > 0.001f)
         buffer.applyGain (gain);
+
+    // Brickwall limiter (0 dB ceiling)
+    if (limiterEnabled.load())
+    {
+        juce::dsp::AudioBlock<float> limBlock (buffer);
+        juce::dsp::ProcessContextReplacing<float> limContext (limBlock);
+        limiter.process (limContext);
+    }
 }
 
 // ============================================================
@@ -141,6 +152,7 @@ void InstaLPEQProcessor::getStateInformation (juce::MemoryBlock& destData)
     juce::XmlElement xml ("InstaLPEQ");
     xml.setAttribute ("bypass", bypassed.load());
     xml.setAttribute ("masterGain", (double) masterGainDb.load());
+    xml.setAttribute ("limiter", limiterEnabled.load());
 
     auto currentBands = getBands();
     for (int i = 0; i < (int) currentBands.size(); ++i)
@@ -164,6 +176,7 @@ void InstaLPEQProcessor::setStateInformation (const void* data, int sizeInBytes)
 
     bypassed.store (xml->getBoolAttribute ("bypass", false));
     masterGainDb.store ((float) xml->getDoubleAttribute ("masterGain", 0.0));
+    limiterEnabled.store (xml->getBoolAttribute ("limiter", true));
 
     std::vector<EQBand> loadedBands;
     for (auto* bandXml : xml->getChildIterator())

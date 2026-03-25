@@ -48,11 +48,21 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
         int sel = qualitySelector.getSelectedId();
         int order = sel + 8;  // 1->9, 2->10, 3->11, 4->12, 5->13, 6->14
         processor.setQuality (order);
+
+        if (sel <= 2)  // 512 or 1024
+            qualityWarning.setText ("Low freq accuracy reduced", juce::dontSendNotification);
+        else
+            qualityWarning.setText ("", juce::dontSendNotification);
     };
     addAndMakeVisible (qualitySelector);
     qualityLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
     qualityLabel.setJustificationType (juce::Justification::centredRight);
     addAndMakeVisible (qualityLabel);
+
+    qualityWarning.setFont (customLookAndFeel.getRegularFont (11.0f));
+    qualityWarning.setColour (juce::Label::textColourId, juce::Colour (0xffff6644));
+    qualityWarning.setJustificationType (juce::Justification::centredRight);
+    addAndMakeVisible (qualityWarning);
 
     // EQ curve
     curveDisplay.setListener (this);
@@ -68,10 +78,19 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
     masterGainSlider.setRange (-24.0, 24.0, 0.1);
     masterGainSlider.setValue (0.0);
     masterGainSlider.setTextValueSuffix (" dB");
+    masterGainSlider.setDoubleClickReturnValue (true, 0.0);
     addAndMakeVisible (masterGainSlider);
     masterGainLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
     masterGainLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (masterGainLabel);
+
+    // Limiter toggle
+    limiterToggle.setToggleState (processor.limiterEnabled.load(), juce::dontSendNotification);
+    addAndMakeVisible (limiterToggle);
+    limiterLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
+    limiterLabel.setColour (juce::Label::textColourId, InstaLPEQLookAndFeel::textSecondary);
+    limiterLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (limiterLabel);
 
     // Sizing
     constrainer.setMinimumSize (700, 450);
@@ -144,11 +163,18 @@ void InstaLPEQEditor::resized()
     masterGainLabel.setBounds (labelArea);
     masterGainSlider.setBounds (masterArea.removeFromLeft (masterH));
 
+    // Limiter toggle next to master gain
+    limiterLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
+    limiterLabel.setBounds (masterArea.removeFromLeft (55));
+    limiterToggle.setBounds (masterArea.removeFromLeft (40));
+
     // Quality selector on the right side of master row
     qualityLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
     auto qLabelArea = masterArea.removeFromRight (30);
     qualityLabel.setBounds (qLabelArea);
     qualitySelector.setBounds (masterArea.removeFromRight ((int) (130 * scale)).reduced (2, (masterH - 24) / 2));
+    qualityWarning.setFont (customLookAndFeel.getRegularFont (std::max (9.0f, 11.0f * scale)));
+    qualityWarning.setBounds (masterArea.removeFromRight ((int) (170 * scale)));
 
     // Node parameter panel (15% of remaining height)
     int nodePanelH = (int) (bounds.getHeight() * 0.18f);
@@ -162,9 +188,10 @@ void InstaLPEQEditor::resized()
 
 void InstaLPEQEditor::timerCallback()
 {
-    // Sync bypass
+    // Sync bypass & limiter
     processor.bypassed.store (bypassToggle.getToggleState());
     processor.masterGainDb.store ((float) masterGainSlider.getValue());
+    processor.limiterEnabled.store (limiterToggle.getToggleState());
 
     // Update display with latest magnitude response
     auto magDb = processor.getFIREngine().getMagnitudeResponseDb();

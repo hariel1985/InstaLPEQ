@@ -39,16 +39,19 @@ private:
     NodeParameterPanel nodePanel;
 
     juce::Label titleLabel { {}, "INSTALPEQ" };
-    juce::Label versionLabel { {}, "v1.1.2" };
+    juce::Label versionLabel { {}, "v1.1.3" };
     juce::ToggleButton bypassToggle;
     juce::Label bypassLabel { {}, "BYPASS" };
 
     juce::TextButton newBandButton { "NEW BAND" };
     juce::ComboBox qualitySelector;
     juce::Label qualityLabel { {}, "FIR" };
+    juce::Label qualityWarning { {}, "" };
 
     juce::Slider masterGainSlider;
     juce::Label masterGainLabel { {}, "MASTER" };
+    juce::ToggleButton limiterToggle;
+    juce::Label limiterLabel { {}, "LIMITER" };
 
     juce::ComponentBoundsConstrainer constrainer;
 

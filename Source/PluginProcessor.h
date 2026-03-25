@@ -43,6 +43,7 @@ public:
     // Settings
     std::atomic<bool> bypassed { false };
     std::atomic<float> masterGainDb { 0.0f };
+    std::atomic<bool> limiterEnabled { true };
 
     void setQuality (int fftOrder);
 
@@ -55,6 +56,7 @@ private:
 
     FIREngine firEngine;
     juce::dsp::Convolution convolution;
+    juce::dsp::Limiter<float> limiter;
 
     double currentSampleRate = 44100.0;
     int currentBlockSize = 512;

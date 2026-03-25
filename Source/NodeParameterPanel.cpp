@@ -5,11 +5,14 @@ NodeParameterPanel::NodeParameterPanel()
 {
     setupSlider (freqSlider, freqLabel, 20.0, 20000.0, 1.0, " Hz");
     freqSlider.setSkewFactorFromMidPoint (1000.0);
+    freqSlider.setDoubleClickReturnValue (true, 1000.0);
 
     setupSlider (gainSlider, gainLabel, -24.0, 24.0, 0.1, " dB");
+    gainSlider.setDoubleClickReturnValue (true, 0.0);
 
     setupSlider (qSlider, qLabel, 0.1, 18.0, 0.01, "");
     qSlider.setSkewFactorFromMidPoint (1.0);
+    qSlider.setDoubleClickReturnValue (true, 1.0);
     qSlider.getProperties().set (InstaLPEQLookAndFeel::knobTypeProperty, "dark");
 
     typeSelector.addItem ("Peak", 1);
