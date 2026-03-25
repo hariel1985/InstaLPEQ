@@ -1,0 +1,161 @@
+name: Build InstaLPEQ
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone JUCE
+        run: git clone --depth 1 https://github.com/juce-framework/JUCE.git ../JUCE
+
+      - name: Configure CMake
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build Release
+        run: cmake --build build --config Release
+
+      - name: Package VST3
+        run: Compress-Archive -Path "build/InstaLPEQ_artefacts/Release/VST3/InstaLPEQ.vst3" -DestinationPath "InstaLPEQ-VST3-Win64.zip"
+
+      - name: Package Standalone
+        run: Compress-Archive -Path "build/InstaLPEQ_artefacts/Release/Standalone/InstaLPEQ.exe" -DestinationPath "InstaLPEQ-Standalone-Win64.zip"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-VST3-Win64
+          path: InstaLPEQ-VST3-Win64.zip
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-Standalone-Win64
+          path: InstaLPEQ-Standalone-Win64.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone JUCE
+        run: git clone --depth 1 https://github.com/juce-framework/JUCE.git ../JUCE
+
+      - name: Configure CMake (Universal Binary)
+        run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build Release
+        run: cmake --build build --config Release
+
+      - name: Package VST3
+        working-directory: build/InstaLPEQ_artefacts/Release
+        run: zip -r $GITHUB_WORKSPACE/InstaLPEQ-VST3-macOS.zip VST3/InstaLPEQ.vst3
+
+      - name: Package AU
+        working-directory: build/InstaLPEQ_artefacts/Release
+        run: zip -r $GITHUB_WORKSPACE/InstaLPEQ-AU-macOS.zip AU/InstaLPEQ.component
+
+      - name: Package Standalone
+        working-directory: build/InstaLPEQ_artefacts/Release
+        run: zip -r $GITHUB_WORKSPACE/InstaLPEQ-Standalone-macOS.zip Standalone/InstaLPEQ.app
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-VST3-macOS
+          path: InstaLPEQ-VST3-macOS.zip
+
+      - name: Upload AU
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-AU-macOS
+          path: InstaLPEQ-AU-macOS.zip
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-Standalone-macOS
+          path: InstaLPEQ-Standalone-macOS.zip
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git libasound2-dev \
+            libfreetype6-dev libx11-dev libxrandr-dev libxcursor-dev \
+            libxinerama-dev libwebkit2gtk-4.1-dev libcurl4-openssl-dev
+
+      - name: Clone JUCE
+        run: git clone --depth 1 https://github.com/juce-framework/JUCE.git ../JUCE
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Release
+        run: cmake --build build --config Release --parallel $(nproc)
+
+      - name: Package VST3
+        working-directory: build/InstaLPEQ_artefacts/Release
+        run: zip -r $GITHUB_WORKSPACE/InstaLPEQ-VST3-Linux-x64.zip VST3/InstaLPEQ.vst3
+
+      - name: Package LV2
+        working-directory: build/InstaLPEQ_artefacts/Release
+        run: zip -r $GITHUB_WORKSPACE/InstaLPEQ-LV2-Linux-x64.zip LV2/InstaLPEQ.lv2
+
+      - name: Package Standalone
+        run: zip -j InstaLPEQ-Standalone-Linux-x64.zip build/InstaLPEQ_artefacts/Release/Standalone/InstaLPEQ
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-VST3-Linux-x64
+          path: InstaLPEQ-VST3-Linux-x64.zip
+
+      - name: Upload LV2
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-LV2-Linux-x64
+          path: InstaLPEQ-LV2-Linux-x64.zip
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: InstaLPEQ-Standalone-Linux-x64
+          path: InstaLPEQ-Standalone-Linux-x64.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/InstaLPEQ-VST3-Win64/InstaLPEQ-VST3-Win64.zip
+            artifacts/InstaLPEQ-Standalone-Win64/InstaLPEQ-Standalone-Win64.zip
+            artifacts/InstaLPEQ-VST3-macOS/InstaLPEQ-VST3-macOS.zip
+            artifacts/InstaLPEQ-AU-macOS/InstaLPEQ-AU-macOS.zip
+            artifacts/InstaLPEQ-Standalone-macOS/InstaLPEQ-Standalone-macOS.zip
+            artifacts/InstaLPEQ-VST3-Linux-x64/InstaLPEQ-VST3-Linux-x64.zip
+            artifacts/InstaLPEQ-LV2-Linux-x64/InstaLPEQ-LV2-Linux-x64.zip
+            artifacts/InstaLPEQ-Standalone-Linux-x64/InstaLPEQ-Standalone-Linux-x64.zip
+          generate_release_notes: true
