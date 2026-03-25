@@ -13,7 +13,7 @@ juce_add_plugin(InstaLPEQ
     NEEDS_MIDI_OUTPUT FALSE
     PLUGIN_MANUFACTURER_CODE Inst
     PLUGIN_CODE Ilpe
-    FORMATS VST3 AU LV2 Standalone
+    FORMATS VST3 AU LV2
     LV2URI "https://github.com/hariel1985/InstaLPEQ"
     PRODUCT_NAME "InstaLPEQ"
     COPY_PLUGIN_AFTER_BUILD FALSE
