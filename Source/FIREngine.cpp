@@ -192,20 +192,41 @@ juce::AudioBuffer<float> FIREngine::generateFIR (const std::vector<EQBand>& band
 
         // Extract actual magnitude from FFT result
         // Format: [DC_real, Nyquist_real, bin1_real, bin1_imag, bin2_real, bin2_imag, ...]
+        // Evaluate at log-spaced frequencies (equal weight per octave)
+        // This matches musical content much better than linear spacing
+        // (linear gives 77% weight to 5k-22k where music has little energy)
+        const int numPoints = 512;
         double powerSum = 0.0;
-        int count = 0;
+        double binRes = sr / (double) fftSize;  // Hz per bin
 
-        for (int i = 1; i < fftSize / 2; ++i)
+        for (int p = 0; p < numPoints; ++p)
         {
-            float re = analysisBuf[i * 2];
-            float im = analysisBuf[i * 2 + 1];
-            powerSum += (double) (re * re + im * im);
-            count++;
+            // Log-spaced 20 Hz — 20 kHz
+            double freq = 20.0 * std::pow (1000.0, (double) p / (double) (numPoints - 1));
+
+            // Interpolate magnitude from FFT bins
+            double binFloat = freq / binRes;
+            int bin = (int) binFloat;
+            double frac = binFloat - (double) bin;
+
+            if (bin < 1 || bin >= fftSize / 2 - 1)
+                continue;
+
+            float re0 = analysisBuf[bin * 2];
+            float im0 = analysisBuf[bin * 2 + 1];
+            float re1 = analysisBuf[(bin + 1) * 2];
+            float im1 = analysisBuf[(bin + 1) * 2 + 1];
+
+            double mag0 = std::sqrt ((double) (re0 * re0 + im0 * im0));
+            double mag1 = std::sqrt ((double) (re1 * re1 + im1 * im1));
+            double mag = mag0 * (1.0 - frac) + mag1 * frac;
+
+            powerSum += mag * mag;
         }
 
-        if (count > 0)
+        if (numPoints > 0)
         {
-            double avgPower = powerSum / (double) count;
+            double avgPower = powerSum / (double) numPoints;
             float rmsGain = (float) std::sqrt (avgPower);
             float makeupDb = -20.0f * std::log10 (std::max (rmsGain, 1e-10f));
             autoMakeupDb.store (makeupDb);

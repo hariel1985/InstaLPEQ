@@ -44,7 +44,7 @@ private:
     NodeParameterPanel nodePanel;
 
     juce::Label titleLabel { {}, "INSTALPEQ" };
-    juce::Label versionLabel { {}, "v1.3.0" };
+    juce::Label versionLabel { {}, "v1.3.2" };
     juce::ToggleButton bypassToggle;
     juce::Label bypassLabel { {}, "BYPASS" };
 
