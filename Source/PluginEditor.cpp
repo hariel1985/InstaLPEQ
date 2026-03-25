@@ -23,6 +23,34 @@ InstaLPEQEditor::InstaLPEQEditor (InstaLPEQProcessor& p)
     bypassLabel.setColour (juce::Label::textColourId, InstaLPEQLookAndFeel::textSecondary);
     addAndMakeVisible (bypassLabel);
 
+    // New Band button
+    newBandButton.onClick = [this]
+    {
+        if (processor.getNumBands() < InstaLPEQProcessor::maxBands)
+        {
+            processor.addBand (1000.0f, 0.0f);
+            syncDisplayFromProcessor();
+            curveDisplay.setSelectedBand (processor.getNumBands() - 1);
+        }
+    };
+    addAndMakeVisible (newBandButton);
+
+    // Quality selector (FIR latency)
+    qualitySelector.addItem ("4096 (~46ms)", 1);
+    qualitySelector.addItem ("8192 (~93ms)", 2);
+    qualitySelector.addItem ("16384 (~186ms)", 3);
+    qualitySelector.setSelectedId (2, juce::dontSendNotification);  // default 8192
+    qualitySelector.onChange = [this]
+    {
+        int sel = qualitySelector.getSelectedId();
+        int order = (sel == 1) ? 12 : (sel == 2) ? 13 : 14;
+        processor.setQuality (order);
+    };
+    addAndMakeVisible (qualitySelector);
+    qualityLabel.setFont (customLookAndFeel.getMediumFont (13.0f));
+    qualityLabel.setJustificationType (juce::Justification::centredRight);
+    addAndMakeVisible (qualityLabel);
+
     // EQ curve
     curveDisplay.setListener (this);
     addAndMakeVisible (curveDisplay);
@@ -102,17 +130,22 @@ void InstaLPEQEditor::resized()
     bypassLabel.setBounds (bypassArea.removeFromLeft (50));
     bypassToggle.setBounds (bypassArea);
 
+    newBandButton.setBounds (header.removeFromRight ((int) (90 * scale)).reduced (2));
+
     // Bottom master row
     int masterH = (int) std::max (50.0f, 65.0f * scale);
     auto masterArea = bounds.removeFromBottom (masterH).reduced (pad, 2);
-
-    // Divider above master
-    // (painted in paint())
 
     masterGainLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
     auto labelArea = masterArea.removeFromLeft (60);
     masterGainLabel.setBounds (labelArea);
     masterGainSlider.setBounds (masterArea.removeFromLeft (masterH));
+
+    // Quality selector on the right side of master row
+    qualityLabel.setFont (customLookAndFeel.getMediumFont (std::max (11.0f, 14.0f * scale)));
+    auto qLabelArea = masterArea.removeFromRight (30);
+    qualityLabel.setBounds (qLabelArea);
+    qualitySelector.setBounds (masterArea.removeFromRight ((int) (130 * scale)).reduced (2, (masterH - 24) / 2));
 
     // Node parameter panel (15% of remaining height)
     int nodePanelH = (int) (bounds.getHeight() * 0.18f);

@@ -125,6 +125,13 @@ void InstaLPEQProcessor::updateFIR()
     firEngine.setBands (currentBands);
 }
 
+void InstaLPEQProcessor::setQuality (int fftOrder)
+{
+    firEngine.setFFTOrder (fftOrder);
+    setLatencySamples (firEngine.getLatencySamples());
+    updateFIR();
+}
+
 // ============================================================
 // State save/restore
 // ============================================================

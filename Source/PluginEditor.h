@@ -39,9 +39,13 @@ private:
     NodeParameterPanel nodePanel;
 
     juce::Label titleLabel { {}, "INSTALPEQ" };
-    juce::Label versionLabel { {}, "v1.0" };
+    juce::Label versionLabel { {}, "v1.1" };
     juce::ToggleButton bypassToggle;
     juce::Label bypassLabel { {}, "BYPASS" };
+
+    juce::TextButton newBandButton { "NEW BAND" };
+    juce::ComboBox qualitySelector;
+    juce::Label qualityLabel { {}, "FIR" };
 
     juce::Slider masterGainSlider;
     juce::Label masterGainLabel { {}, "MASTER" };

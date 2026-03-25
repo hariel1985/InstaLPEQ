@@ -44,6 +44,8 @@ public:
     std::atomic<bool> bypassed { false };
     std::atomic<float> masterGainDb { 0.0f };
 
+    void setQuality (int fftOrder);
+
     FIREngine& getFIREngine() { return firEngine; }
     double getCurrentSampleRate() const { return currentSampleRate; }
 

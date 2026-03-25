@@ -6,24 +6,24 @@ Free, open-source linear phase EQ plugin built with JUCE. Available as VST3, AU 
 
 ## Download
 
-**[Latest Release: v1.0](https://github.com/hariel1985/InstaLPEQ/releases/tag/v1.0)**
+**[Latest Release: v1.1](https://github.com/hariel1985/InstaLPEQ/releases/tag/v1.1)**
 
 ### Windows
 | File | Description |
 |------|-------------|
-| [InstaLPEQ-VST3-Win64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.0/InstaLPEQ-VST3-Win64.zip) | VST3 plugin — copy to `C:\Program Files\Common Files\VST3\` |
+| [InstaLPEQ-VST3-Win64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.1/InstaLPEQ-VST3-Win64.zip) | VST3 plugin — copy to `C:\Program Files\Common Files\VST3\` |
 
 ### macOS (Universal Binary: Apple Silicon + Intel)
 | File | Description |
 |------|-------------|
-| [InstaLPEQ-VST3-macOS.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.0/InstaLPEQ-VST3-macOS.zip) | VST3 plugin — copy to `~/Library/Audio/Plug-Ins/VST3/` |
-| [InstaLPEQ-AU-macOS.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.0/InstaLPEQ-AU-macOS.zip) | Audio Unit — copy to `~/Library/Audio/Plug-Ins/Components/` |
+| [InstaLPEQ-VST3-macOS.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.1/InstaLPEQ-VST3-macOS.zip) | VST3 plugin — copy to `~/Library/Audio/Plug-Ins/VST3/` |
+| [InstaLPEQ-AU-macOS.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.1/InstaLPEQ-AU-macOS.zip) | Audio Unit — copy to `~/Library/Audio/Plug-Ins/Components/` |
 
 ### Linux (x64, built on Ubuntu 22.04)
 | File | Description |
 |------|-------------|
-| [InstaLPEQ-VST3-Linux-x64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.0/InstaLPEQ-VST3-Linux-x64.zip) | VST3 plugin — copy to `~/.vst3/` |
-| [InstaLPEQ-LV2-Linux-x64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.0/InstaLPEQ-LV2-Linux-x64.zip) | LV2 plugin — copy to `~/.lv2/` |
+| [InstaLPEQ-VST3-Linux-x64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.1/InstaLPEQ-VST3-Linux-x64.zip) | VST3 plugin — copy to `~/.vst3/` |
+| [InstaLPEQ-LV2-Linux-x64.zip](https://github.com/hariel1985/InstaLPEQ/releases/download/v1.1/InstaLPEQ-LV2-Linux-x64.zip) | LV2 plugin — copy to `~/.lv2/` |
 
 > **macOS note:** Builds are Universal Binary (Apple Silicon + Intel). Not code-signed — after copying the plugin, remove the quarantine flag in Terminal:
 > ```bash
