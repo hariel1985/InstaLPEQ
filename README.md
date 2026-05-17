@@ -4,6 +4,8 @@ Free, open-source linear phase EQ plugin built with JUCE. Available as VST3, AU 
 
 ![VST3](https://img.shields.io/badge/format-VST3-blue) ![AU](https://img.shields.io/badge/format-AU-blue) ![LV2](https://img.shields.io/badge/format-LV2-blue) ![C++](https://img.shields.io/badge/language-C%2B%2B17-orange) ![JUCE](https://img.shields.io/badge/framework-JUCE-green) ![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey) ![Build](https://github.com/hariel1985/InstaLPEQ/actions/workflows/build.yml/badge.svg)
 
+![InstaLPEQ screenshot](screenshot.jpg)
+
 ## Why Linear Phase EQ?
 
 Traditional (minimum phase) EQs alter the **phase** of the signal at the frequencies they boost or cut. This causes:
